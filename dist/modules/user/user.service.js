@@ -1,0 +1,155 @@
+import prisma from "../../config/db.js";
+import { redis, CacheKeys, CACHE_TTL } from "../../config/redis.js";
+import { logger } from '../../utils/logger.js';
+import { ConflictError } from '../../utils/error.js';
+export async function getUserById(userId) {
+    const cacheKey = CacheKeys.userProfile(userId);
+    try {
+        const cached = await redis.get(cacheKey);
+        if (cached) {
+            logger.debug(`Cache HIT: ${cacheKey}`);
+            return JSON.parse(cached);
+        }
+        logger.debug(`Cache MISS: ${cacheKey}`);
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                email: true,
+                username: true,
+                displayName: true,
+                photoURL: true,
+                createdAt: true,
+            },
+        });
+        if (user) {
+            await redis.setex(cacheKey, CACHE_TTL.USER_PROFILE, JSON.stringify(user));
+        }
+        return user;
+    }
+    catch (error) {
+        logger.error('Error fetching user:', error);
+        throw error;
+    }
+}
+export async function updateUserProfile(userId, data) {
+    try {
+        //username is already taken 
+        if (data.username) {
+            const existing = await prisma.user.findFirst({
+                where: {
+                    username: data.username,
+                    NOT: { id: userId },
+                },
+            });
+            if (existing) {
+                throw new ConflictError('Username already taken');
+            }
+        }
+        const updated = await prisma.user.update({
+            where: { id: userId },
+            data,
+            select: {
+                id: true,
+                email: true,
+                username: true,
+                displayName: true,
+                photoURL: true,
+                createdAt: true,
+            },
+        });
+        await redis.del(CacheKeys.userProfile(userId));
+        logger.info(`User profile updated: ${userId}`);
+        return updated;
+    }
+    catch (error) {
+        logger.error('Error updating user:', error);
+        throw error;
+    }
+}
+export async function getUserStats(userId) {
+    try {
+        const [workspaceStats, knowledgeCount, conversationCount] = await Promise.all([
+            prisma.workspaceMember.groupBy({
+                by: ['userId'],
+                where: { userId },
+                _count: true,
+            }),
+            prisma.knowledgeItem.count({
+                where: { createdById: userId },
+            }),
+            prisma.conversation.count({
+                where: { userId },
+            }),
+        ]);
+        const ownedWorkspaces = await prisma.workspace.count({
+            where: { ownerId: userId },
+        });
+        return {
+            totalWorkspaces: workspaceStats[0]?._count || 0,
+            ownedWorkspaces: ownedWorkspaces,
+            totalKnowledgeItems: knowledgeCount,
+            totalConversations: conversationCount,
+        };
+    }
+    catch (error) {
+        logger.error('Error fetching user stats:', error);
+        throw error;
+    }
+}
+export async function getUserWorkspaces(userId) {
+    const cacheKey = CacheKeys.userWorkspaces(userId);
+    try {
+        const cached = await redis.get(cacheKey);
+        if (cached) {
+            logger.debug(`Cache HIT: ${cacheKey}`);
+            return JSON.parse(cached);
+        }
+        logger.debug(`Cache MISS: ${cacheKey}`);
+        const workspaces = await prisma.workspaceMember.findMany({
+            where: { userId },
+            include: {
+                workspace: {
+                    select: {
+                        id: true,
+                        name: true,
+                        description: true,
+                        createdAt: true,
+                        updatedAt: true,
+                        ownerId: true,
+                    },
+                },
+            },
+            orderBy: {
+                joinedAt: 'desc',
+            },
+        });
+        //@ts-ignore
+        const result = workspaces.map((wm) => ({
+            ...wm.workspace,
+            role: wm.role,
+            joinedAt: wm.joinedAt,
+        }));
+        await redis.setex(cacheKey, CACHE_TTL.WORKSPACE_LIST, JSON.stringify(result));
+        return result;
+    }
+    catch (error) {
+        logger.error('Error fetching user workspaces:', error);
+        throw error;
+    }
+}
+export async function deleteUser(userId) {
+    try {
+        await prisma.user.delete({
+            where: { id: userId },
+        });
+        await redis.del(CacheKeys.userProfile(userId));
+        await redis.del(CacheKeys.userWorkspaces(userId));
+        logger.info(`User deleted: ${userId}`);
+    }
+    catch (error) {
+        logger.error('Error deleting user:', error);
+        throw error;
+    }
+}
+//# sourceMappingURL=user.service.js.map

@@ -1,0 +1,290 @@
+import prisma from '../../config/db.js';
+import { redis, CacheKeys, CACHE_TTL } from '../../config/redis.js';
+import { logger } from '../../utils/logger.js';
+import { NotFoundError, ForbiddenError, ConflictError } from '../../utils/error.js';
+export async function createWorkspace(userId, data) {
+    try {
+        const workspace = await prisma.workspace.create({
+            data: {
+                name: data.name,
+                description: data.description ?? null,
+                ownerId: userId,
+                members: {
+                    create: {
+                        userId,
+                        role: 'OWNER',
+                    },
+                },
+            },
+            include: {
+                members: {
+                    where: { userId },
+                    select: { role: true },
+                },
+            },
+        });
+        await redis.del(CacheKeys.userWorkspaces(userId));
+        logger.info(`Workspace created: ${workspace.id} by user: ${userId}`);
+        return {
+            ...workspace,
+            //@ts-ignore
+            role: workspace.members[0].role,
+        };
+    }
+    catch (error) {
+        logger.error('Error creating workspace:', error);
+        throw error;
+    }
+}
+export async function getWorkspaceById(workspaceId, userId) {
+    try {
+        const workspace = await prisma.workspace.findUnique({
+            where: { id: workspaceId },
+            include: {
+                members: {
+                    where: { userId },
+                    select: { role: true },
+                },
+                _count: {
+                    select: {
+                        members: true,
+                        items: true,
+                    },
+                },
+            },
+        });
+        if (!workspace) {
+            throw new NotFoundError('Workspace not found');
+        }
+        if (workspace.members.length === 0) {
+            throw new ForbiddenError('Access denied to this workspace');
+        }
+        return {
+            ...workspace,
+            //@ts-ignore
+            role: workspace.members[0].role,
+            memberCount: workspace._count.members,
+            itemCount: workspace._count.items,
+        };
+    }
+    catch (error) {
+        logger.error('Error fetching workspace:', error);
+        throw error;
+    }
+}
+export async function updateWorkspace(workspaceId, data) {
+    try {
+        const updateData = {};
+        if (data.name !== undefined)
+            updateData.name = data.name;
+        if (data.description !== undefined)
+            updateData.description = data.description ?? null;
+        const updated = await prisma.workspace.update({
+            where: { id: workspaceId },
+            data: updateData,
+        });
+        const members = await prisma.workspaceMember.findMany({
+            where: { workspaceId },
+            select: { userId: true },
+        });
+        await Promise.all(members.map((m) => redis.del(CacheKeys.userWorkspaces(m.userId))));
+        logger.info(`Workspace updated: ${workspaceId}`);
+        return updated;
+    }
+    catch (error) {
+        logger.error('Error updating workspace:', error);
+        throw error;
+    }
+}
+export async function deleteWorkspace(workspaceId) {
+    try {
+        const members = await prisma.workspaceMember.findMany({
+            where: { workspaceId },
+            select: { userId: true },
+        });
+        await prisma.workspace.delete({
+            where: { id: workspaceId },
+        });
+        await Promise.all([
+            ...members.map((m) => redis.del(CacheKeys.userWorkspaces(m.userId))),
+            redis.del(CacheKeys.workspace(workspaceId)),
+            redis.del(CacheKeys.workspaceMembers(workspaceId)),
+        ]);
+        logger.info(`Workspace deleted: ${workspaceId}`);
+    }
+    catch (error) {
+        logger.error('Error deleting workspace:', error);
+        throw error;
+    }
+}
+export async function getWorkspaceMembers(workspaceId) {
+    const cacheKey = CacheKeys.workspaceMembers(workspaceId);
+    try {
+        // Check cache
+        const cached = await redis.get(cacheKey);
+        if (cached) {
+            logger.debug(`Cache HIT: ${cacheKey}`);
+            return JSON.parse(cached);
+        }
+        logger.debug(`Cache MISS: ${cacheKey}`);
+        const members = await prisma.workspaceMember.findMany({
+            where: { workspaceId },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        username: true,
+                        displayName: true,
+                        photoURL: true,
+                    },
+                },
+            },
+            orderBy: {
+                joinedAt: 'asc',
+            },
+        });
+        await redis.setex(cacheKey, CACHE_TTL.WORKSPACE_LIST, JSON.stringify(members));
+        return members;
+    }
+    catch (error) {
+        logger.error('Error fetching workspace members:', error);
+        throw error;
+    }
+}
+export async function addWorkspaceMember(workspaceId, email, role) {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { email },
+            select: { id: true },
+        });
+        if (!user) {
+            throw new NotFoundError('User with this email not found');
+        }
+        const existing = await prisma.workspaceMember.findUnique({
+            where: {
+                userId_workspaceId: {
+                    userId: user.id,
+                    workspaceId,
+                },
+            },
+        });
+        if (existing) {
+            throw new ConflictError('User is already a member of this workspace');
+        }
+        const member = await prisma.workspaceMember.create({
+            data: {
+                userId: user.id,
+                workspaceId,
+                role,
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        username: true,
+                        displayName: true,
+                        photoURL: true,
+                    },
+                },
+            },
+        });
+        await Promise.all([
+            redis.del(CacheKeys.workspaceMembers(workspaceId)),
+            redis.del(CacheKeys.userWorkspaces(user.id)),
+        ]);
+        logger.info(`Member added to workspace: ${workspaceId}, user: ${user.id}`);
+        return member;
+    }
+    catch (error) {
+        logger.error('Error adding workspace member:', error);
+        throw error;
+    }
+}
+export async function updateMemberRole(workspaceId, memberId, newRole) {
+    try {
+        const updated = await prisma.workspaceMember.update({
+            where: {
+                id: memberId,
+                workspaceId,
+            },
+            data: { role: newRole },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        username: true,
+                        displayName: true,
+                        photoURL: true,
+                    },
+                },
+            },
+        });
+        await Promise.all([
+            redis.del(CacheKeys.workspaceMembers(workspaceId)),
+            redis.del(CacheKeys.workspacePermissions(updated.userId, workspaceId)),
+        ]);
+        logger.info(`Member role updated: ${memberId} to ${newRole}`);
+        return updated;
+    }
+    catch (error) {
+        logger.error('Error updating member role:', error);
+        throw error;
+    }
+}
+export async function removeMember(workspaceId, memberId) {
+    try {
+        const member = await prisma.workspaceMember.findUnique({
+            where: { id: memberId },
+            select: { userId: true, workspaceId: true },
+        });
+        if (!member || member.workspaceId !== workspaceId) {
+            throw new NotFoundError('Member not found in this workspace');
+        }
+        await prisma.workspaceMember.delete({
+            where: { id: memberId },
+        });
+        await Promise.all([
+            redis.del(CacheKeys.workspaceMembers(workspaceId)),
+            redis.del(CacheKeys.userWorkspaces(member.userId)),
+            redis.del(CacheKeys.workspacePermissions(member.userId, workspaceId)),
+        ]);
+        logger.info(`Member removed from workspace: ${workspaceId}, member: ${memberId}`);
+    }
+    catch (error) {
+        logger.error('Error removing member:', error);
+        throw error;
+    }
+}
+export async function leaveWorkspace(workspaceId, userId) {
+    try {
+        const workspace = await prisma.workspace.findUnique({
+            where: { id: workspaceId },
+            select: { ownerId: true },
+        });
+        if (workspace?.ownerId === userId) {
+            throw new ForbiddenError('Workspace owner cannot leave. Transfer ownership or delete workspace first.');
+        }
+        await prisma.workspaceMember.delete({
+            where: {
+                userId_workspaceId: {
+                    userId,
+                    workspaceId,
+                },
+            },
+        });
+        await Promise.all([
+            redis.del(CacheKeys.workspaceMembers(workspaceId)),
+            redis.del(CacheKeys.userWorkspaces(userId)),
+            redis.del(CacheKeys.workspacePermissions(userId, workspaceId)),
+        ]);
+        logger.info(`User left workspace: ${workspaceId}, user: ${userId}`);
+    }
+    catch (error) {
+        logger.error('Error leaving workspace:', error);
+        throw error;
+    }
+}
+//# sourceMappingURL=workspace.service.js.map

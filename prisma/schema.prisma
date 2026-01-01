@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  extensions = [vector]
+}
+
+
+enum Role {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+enum ContentType {
+  ARTICLE       
+  VIDEO        
+  AUDIO         
+  SOCIAL_POST   
+  DOCUMENT      
+  CODE          
+  IMAGE         
+  OTHER       
+}
+
+enum ProcessingStatus {
+  PENDING       
+  PROCESSING    
+  COMPLETED     
+  FAILED       
+}
+
+model User {
+  id            String   @id 
+  email         String   @unique
+  username      String   @unique
+
+  displayName   String?
+  photoURL      String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  workspaces    WorkspaceMember[]
+  ownedWorkspaces Workspace[] @relation("WorkspaceOwner")
+  createdItems  KnowledgeItem[] @relation("ItemCreator")
+  conversations Conversation[]
+  
+  @@index([email])
+}
+
+
+model Workspace {
+  id          String   @id @default(uuid())
+  name        String
+  description String?  @db.Text
+  
+  ownerId     String
+  owner       User     @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     WorkspaceMember[]
+  items       KnowledgeItem[]
+  
+  @@index([ownerId])
+}
+
+model WorkspaceMember {
+  id          String   @id @default(uuid())
+  role        Role     @default(VIEWER)
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  joinedAt    DateTime @default(now())
+  
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
+}
+
+
+model KnowledgeItem {
+  id          String   @id @default(uuid())
+  
+  sourceUrl   String   
+  userIntent  String?  @db.Text 
+  
+
+  summary     String?  @db.Text     
+  scrapedContent String? @db.Text   
+  contentType ContentType @default(OTHER) 
+  
+  status      ProcessingStatus @default(PENDING)
+  errorMessage String?  @db.Text 
+  
+  metadata    Json?
+  
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  createdById String
+  createdBy   User      @relation("ItemCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  embedding   Embedding?
+  tags        TagOnItem[]
+  
+  @@index([workspaceId, createdAt])
+  @@index([contentType])
+  @@index([status])
+}
+
+
+model Embedding {
+  id              String   @id @default(uuid())
+  
+  vector          Unsupported("vector(768)")
+  
+  model           String   @default("text-embedding-004")
+  
+  knowledgeItemId String   @unique
+  item            KnowledgeItem @relation(fields: [knowledgeItemId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+}
+
+
+model Tag {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  
+  items     TagOnItem[]
+  createdAt DateTime @default(now())
+  
+  @@index([name])
+}
+
+model TagOnItem {
+  itemId String
+  item   KnowledgeItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  
+  tagId  String
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  
+  addedByAI Boolean @default(false)
+  
+  @@id([itemId, tagId])
+  @@index([tagId])
+}
+
+
+model Conversation {
+  id        String   @id @default(uuid())
+  title     String?  
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  messages  Message[]
+  
+  @@index([userId, createdAt])
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  role           String   
+  content        String   @db.Text
+  
+  sourceItemIds  String[] 
+  
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  createdAt      DateTime @default(now())
+  
+  @@index([conversationId, createdAt])
+}
+
+
+model AIUsage {
+  id        String   @id @default(uuid())
+  
+  action    String  
+  model     String   
+  tokens    Int      @default(0)
+  cost      Float?   
+
+  userId    String?  
+  
+  createdAt DateTime @default(now())
+  
+  @@index([action, createdAt])
+}
+
+model Space {
+  id          String    @id @default(uuid())
+  name        String
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  elements SpaceElement[]
+  
+  @@index([workspaceId])
+}
+
+model SpaceElement {
+  id        String   @id @default(uuid())
+  type      String  
+  content   Json    
+  spaceId   String
+  space     Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([spaceId])
+}
