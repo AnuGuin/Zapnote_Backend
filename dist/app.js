@@ -6,7 +6,6 @@ import { initFirebase } from './config/firebase.js';
 import { testRedisConnection } from './config/redis.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { logger } from './utils/logger.js';
-import prisma from './config/db.js';
 import userRoutes from './modules/user/user.route.js';
 import knowledgeRoutes from './modules/knowledge/knowledge.route.js';
 import workspaceRoutes from './modules/workspace/workspace.route.js';
@@ -39,66 +38,65 @@ app.get('/health', (req, res) => {
     });
 });
 // --- TEST SEED ROUTE (REMOVE IN PRODUCTION) ---
-app.post('/api/test/seed', async (req, res) => {
-    try {
-        const userId = '11111111-1111-4111-8111-111111111111';
-        const workspaceId = '22222222-2222-4222-8222-222222222222';
-        const existingUser = await prisma.user.findFirst({
-            where: {
-                OR: [
-                    { email: 'test@example.com' },
-                    { username: 'testuser' }
-                ]
-            }
-        });
-        if (existingUser && existingUser.id !== userId) {
-            console.log(`[TEST SEED] Deleting conflicting user ${existingUser.id}`);
-            await prisma.user.delete({ where: { id: existingUser.id } });
-        }
-        const user = await prisma.user.upsert({
-            where: { id: userId },
-            update: {},
-            create: {
-                id: userId,
-                email: 'test@example.com',
-                username: 'testuser',
-                displayName: 'Test User',
-            },
-        });
-        const workspace = await prisma.workspace.upsert({
-            where: { id: workspaceId },
-            update: {},
-            create: {
-                id: workspaceId,
-                name: 'Test Workspace',
-                ownerId: userId,
-            },
-        });
-        await prisma.workspaceMember.upsert({
-            where: {
-                userId_workspaceId: {
-                    userId,
-                    workspaceId,
-                },
-            },
-            update: { role: 'OWNER' },
-            create: {
-                userId,
-                workspaceId,
-                role: 'OWNER',
-            },
-        });
-        res.json({
-            success: true,
-            message: 'Test data seeded successfully',
-            data: { user, workspace },
-        });
-    }
-    catch (error) {
-        console.error('Seeding error:', error);
-        res.status(500).json({ success: false, error: 'Failed to seed data' });
-    }
-});
+// app.post('/api/test/seed', async (req, res) => {
+//   try {
+//     const userId = '11111111-1111-4111-8111-111111111111';
+//     const workspaceId = '22222222-2222-4222-8222-222222222222';
+//     const existingUser = await prisma.user.findFirst({
+//       where: {
+//         OR: [
+//           { email: 'test@example.com' },
+//           { username: 'testuser' }
+//         ]
+//       }
+//     });
+//     if (existingUser && existingUser.id !== userId) {
+//       console.log(`[TEST SEED] Deleting conflicting user ${existingUser.id}`);
+//       await prisma.user.delete({ where: { id: existingUser.id } });
+//     }
+//     const user = await prisma.user.upsert({
+//       where: { id: userId },
+//       update: {},
+//       create: {
+//         id: userId,
+//         email: 'test@example.com',
+//         username: 'testuser',
+//         displayName: 'Test User',
+//       },
+//     });
+//     const workspace = await prisma.workspace.upsert({
+//       where: { id: workspaceId },
+//       update: {},
+//       create: {
+//         id: workspaceId,
+//         name: 'Test Workspace',
+//         ownerId: userId,
+//       },
+//     });
+//     await prisma.workspaceMember.upsert({
+//       where: {
+//         userId_workspaceId: {
+//           userId,
+//           workspaceId,
+//         },
+//       },
+//       update: { role: 'OWNER' },
+//       create: {
+//         userId,
+//         workspaceId,
+//         role: 'OWNER',
+//       },
+//     });
+//     res.json({
+//       success: true,
+//       message: 'Test data seeded successfully',
+//       data: { user, workspace },
+//     });
+//   } catch (error) {
+//     console.error('Seeding error:', error);
+//     res.status(500).json({ success: false, error: 'Failed to seed data' });
+//   }
+// });
 // ----------------------------------------------
 //API Routes
 app.use('/api/v1/users', userRoutes);

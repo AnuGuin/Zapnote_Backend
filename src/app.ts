@@ -48,71 +48,71 @@ app.get('/health', (req, res) => {
 });
 
 // --- TEST SEED ROUTE (REMOVE IN PRODUCTION) ---
-app.post('/api/test/seed', async (req, res) => {
-  try {
-    const userId = '11111111-1111-4111-8111-111111111111';
-    const workspaceId = '22222222-2222-4222-8222-222222222222';
+// app.post('/api/test/seed', async (req, res) => {
+//   try {
+//     const userId = '11111111-1111-4111-8111-111111111111';
+//     const workspaceId = '22222222-2222-4222-8222-222222222222';
 
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: 'test@example.com' },
-          { username: 'testuser' }
-        ]
-      }
-    });
+//     const existingUser = await prisma.user.findFirst({
+//       where: {
+//         OR: [
+//           { email: 'test@example.com' },
+//           { username: 'testuser' }
+//         ]
+//       }
+//     });
 
-    if (existingUser && existingUser.id !== userId) {
-      console.log(`[TEST SEED] Deleting conflicting user ${existingUser.id}`);
-      await prisma.user.delete({ where: { id: existingUser.id } });
-    }
+//     if (existingUser && existingUser.id !== userId) {
+//       console.log(`[TEST SEED] Deleting conflicting user ${existingUser.id}`);
+//       await prisma.user.delete({ where: { id: existingUser.id } });
+//     }
 
-    const user = await prisma.user.upsert({
-      where: { id: userId },
-      update: {},
-      create: {
-        id: userId,
-        email: 'test@example.com',
-        username: 'testuser',
-        displayName: 'Test User',
-      },
-    });
+//     const user = await prisma.user.upsert({
+//       where: { id: userId },
+//       update: {},
+//       create: {
+//         id: userId,
+//         email: 'test@example.com',
+//         username: 'testuser',
+//         displayName: 'Test User',
+//       },
+//     });
 
-    const workspace = await prisma.workspace.upsert({
-      where: { id: workspaceId },
-      update: {},
-      create: {
-        id: workspaceId,
-        name: 'Test Workspace',
-        ownerId: userId,
-      },
-    });
+//     const workspace = await prisma.workspace.upsert({
+//       where: { id: workspaceId },
+//       update: {},
+//       create: {
+//         id: workspaceId,
+//         name: 'Test Workspace',
+//         ownerId: userId,
+//       },
+//     });
 
-    await prisma.workspaceMember.upsert({
-      where: {
-        userId_workspaceId: {
-          userId,
-          workspaceId,
-        },
-      },
-      update: { role: 'OWNER' },
-      create: {
-        userId,
-        workspaceId,
-        role: 'OWNER',
-      },
-    });
+//     await prisma.workspaceMember.upsert({
+//       where: {
+//         userId_workspaceId: {
+//           userId,
+//           workspaceId,
+//         },
+//       },
+//       update: { role: 'OWNER' },
+//       create: {
+//         userId,
+//         workspaceId,
+//         role: 'OWNER',
+//       },
+//     });
 
-    res.json({
-      success: true,
-      message: 'Test data seeded successfully',
-      data: { user, workspace },
-    });
-  } catch (error) {
-    console.error('Seeding error:', error);
-    res.status(500).json({ success: false, error: 'Failed to seed data' });
-  }
-});
+//     res.json({
+//       success: true,
+//       message: 'Test data seeded successfully',
+//       data: { user, workspace },
+//     });
+//   } catch (error) {
+//     console.error('Seeding error:', error);
+//     res.status(500).json({ success: false, error: 'Failed to seed data' });
+//   }
+// });
 // ----------------------------------------------
 
 //API Routes
