@@ -1,7 +1,6 @@
 import { Receiver } from '@upstash/qstash';
 import { logger } from '../utils/logger.js';
 export const verifyQStashSignature = async (req, res, next) => {
-    // Skip verification in development if needed, or ensure keys are present
     if (process.env.NODE_ENV === 'development' && !process.env.QSTASH_CURRENT_SIGNING_KEY) {
         logger.warn('Skipping QStash verification in development (no keys)');
         return next();

@@ -40,7 +40,6 @@ export async function authenticateFirebaseToken(req, res, next) {
             });
             console.log(`New user created: ${user.id}`);
         }
-        // Attach to request
         req.userId = firebaseUid;
         if (email)
             req.userEmail = email;

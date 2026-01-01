@@ -2,7 +2,7 @@ import express from 'express';
 import { authenticateFirebaseToken } from '../../middleware/firebase.middleware.js';
 import { validateRequest } from '../../middleware/validation.middleware.js';
 import { rateLimit } from '../../middleware/ratelimit.middleware.js';
-import { checkWorkspaceAccess } from '../workspace/workspace.middleware.js';
+import { checkWorkspaceAccess } from '../../middleware/workspace.middleware.js';
 import * as chatController from './chat.controller.js';
 import { createConversationSchema, sendMessageSchema, getMessagesSchema, } from './chat.types.js';
 const router = express.Router({ mergeParams: true });

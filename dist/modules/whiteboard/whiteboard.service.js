@@ -1,12 +1,10 @@
 import prisma from '../../config/db.js';
 import { logger } from '../../utils/logger.js';
 import { NotFoundError } from '../../utils/error.js';
-/**
- * Create new space (whiteboard)
- */
+const db = prisma;
 export async function createSpace(workspaceId, name) {
     try {
-        const space = await prisma.space.create({
+        const space = await db.space.create({
             data: {
                 name,
                 workspaceId,
@@ -20,12 +18,9 @@ export async function createSpace(workspaceId, name) {
         throw error;
     }
 }
-/**
- * Get all spaces in workspace
- */
 export async function getWorkspaceSpaces(workspaceId) {
     try {
-        const spaces = await prisma.space.findMany({
+        const spaces = await db.space.findMany({
             where: { workspaceId },
             orderBy: { updatedAt: 'desc' },
             include: {
@@ -41,12 +36,9 @@ export async function getWorkspaceSpaces(workspaceId) {
         throw error;
     }
 }
-/**
- * Get space with all elements
- */
 export async function getSpaceWithElements(spaceId, workspaceId) {
     try {
-        const space = await prisma.space.findFirst({
+        const space = await db.space.findFirst({
             where: {
                 id: spaceId,
                 workspaceId,
@@ -67,20 +59,16 @@ export async function getSpaceWithElements(spaceId, workspaceId) {
         throw error;
     }
 }
-/**
- * Create element in space
- */
 export async function createElement(spaceId, type, content) {
     try {
-        const element = await prisma.spaceElement.create({
+        const element = await db.spaceElement.create({
             data: {
                 spaceId,
                 type,
                 content,
             },
         });
-        // Update space timestamp
-        await prisma.space.update({
+        await db.space.update({
             where: { id: spaceId },
             data: { updatedAt: new Date() },
         });
@@ -92,12 +80,9 @@ export async function createElement(spaceId, type, content) {
         throw error;
     }
 }
-/**
- * Update element
- */
 export async function updateElement(elementId, spaceId, content) {
     try {
-        const element = await prisma.spaceElement.update({
+        const element = await db.spaceElement.update({
             where: {
                 id: elementId,
                 spaceId,
@@ -107,8 +92,7 @@ export async function updateElement(elementId, spaceId, content) {
                 updatedAt: new Date(),
             },
         });
-        // Update space timestamp
-        await prisma.space.update({
+        await db.space.update({
             where: { id: spaceId },
             data: { updatedAt: new Date() },
         });
@@ -119,12 +103,9 @@ export async function updateElement(elementId, spaceId, content) {
         throw error;
     }
 }
-/**
- * Delete element
- */
 export async function deleteElement(elementId, spaceId) {
     try {
-        await prisma.spaceElement.delete({
+        await db.spaceElement.delete({
             where: {
                 id: elementId,
                 spaceId,
@@ -137,12 +118,9 @@ export async function deleteElement(elementId, spaceId) {
         throw error;
     }
 }
-/**
- * Delete space
- */
 export async function deleteSpace(spaceId, workspaceId) {
     try {
-        await prisma.space.delete({
+        await db.space.delete({
             where: {
                 id: spaceId,
                 workspaceId,
