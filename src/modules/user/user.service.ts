@@ -36,7 +36,7 @@ export async function getUserById(userId: string): Promise<UserProfile | null> {
     });
 
     if (user) {
-      await redis.setex(cacheKey, CACHE_TTL.USER_PROFILE, JSON.stringify(user));
+      await redis.set(cacheKey, user, { ex: CACHE_TTL.USER_PROFILE });
     }
     return user;
   } catch (error) {
@@ -161,7 +161,7 @@ export async function getUserWorkspaces(userId: string) {
       joinedAt: wm.joinedAt,
     }));
 
-    await redis.setex(cacheKey, CACHE_TTL.WORKSPACE_LIST, JSON.stringify(result));
+    await redis.set(cacheKey, result, { ex: CACHE_TTL.WORKSPACE_LIST });
 
     return result;
   } catch (error) {

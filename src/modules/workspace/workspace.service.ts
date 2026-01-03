@@ -184,7 +184,7 @@ export async function getWorkspaceMembers(
       },
     });
 
-    await redis.setex(cacheKey, CACHE_TTL.WORKSPACE_LIST, JSON.stringify(members));
+    await redis.set(cacheKey, members, { ex: CACHE_TTL.WORKSPACE_LIST });
 
     return members;
   } catch (error) {

@@ -12,7 +12,7 @@ export async function generateEmbeddingCached(text: string): Promise<number[]> {
       const cached = await redis.get(cacheKey);
       if (cached) {
         logger.debug(`Embedding cache HIT`);
-        return JSON.parse(cached as string);
+        return typeof cached === 'string' ? JSON.parse(cached) : cached;
       }
     } catch (cacheReadError) {
       logger.warn('Embedding cache read skipped (redis unavailable)');
@@ -22,7 +22,7 @@ export async function generateEmbeddingCached(text: string): Promise<number[]> {
     const embedding = await geminiEmbed(text.slice(0, 10000));
 
     try {
-      await redis.setex(cacheKey, CACHE_TTL.EMBEDDINGS, JSON.stringify(embedding));
+      await redis.set(cacheKey, embedding, { ex: CACHE_TTL.EMBEDDINGS });
     } catch {
       logger.warn('Embedding cache write skipped (redis unavailable)');
     }

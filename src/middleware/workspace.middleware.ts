@@ -54,7 +54,7 @@ export async function checkWorkspaceAccess(
       throw new ForbiddenError('Access denied to this workspace');
     }
 
-    await redis.setex(cacheKey, CACHE_TTL.WORKSPACE_PERMISSIONS, member.role);
+    await redis.set(cacheKey, member.role, { ex: CACHE_TTL.WORKSPACE_PERMISSIONS });
 
     req.workspaceRole = member.role;
     next();
