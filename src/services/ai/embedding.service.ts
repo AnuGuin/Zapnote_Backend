@@ -12,7 +12,7 @@ export async function generateEmbeddingCached(text: string): Promise<number[]> {
       const cached = await redis.get(cacheKey);
       if (cached) {
         logger.debug(`Embedding cache HIT`);
-        return typeof cached === 'string' ? JSON.parse(cached) : cached;
+        return typeof cached === 'string' ? JSON.parse(cached) : (cached as number[]);
       }
     } catch (cacheReadError) {
       logger.warn('Embedding cache read skipped (redis unavailable)');

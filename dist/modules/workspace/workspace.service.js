@@ -2,6 +2,12 @@ import prisma from '../../config/db.js';
 import { redis, CacheKeys, CACHE_TTL } from '../../config/redis.js';
 import { logger } from '../../utils/logger.js';
 import { NotFoundError, ForbiddenError, ConflictError } from '../../utils/error.js';
+function parseCachedData(cached) {
+    if (typeof cached === 'string') {
+        return JSON.parse(cached);
+    }
+    return cached;
+}
 export async function createWorkspace(userId, data) {
     try {
         const workspace = await prisma.workspace.create({
@@ -120,11 +126,10 @@ export async function deleteWorkspace(workspaceId) {
 export async function getWorkspaceMembers(workspaceId) {
     const cacheKey = CacheKeys.workspaceMembers(workspaceId);
     try {
-        // Check cache
         const cached = await redis.get(cacheKey);
         if (cached) {
             logger.debug(`Cache HIT: ${cacheKey}`);
-            return JSON.parse(cached);
+            return parseCachedData(cached);
         }
         logger.debug(`Cache MISS: ${cacheKey}`);
         const members = await prisma.workspaceMember.findMany({
@@ -144,7 +149,7 @@ export async function getWorkspaceMembers(workspaceId) {
                 joinedAt: 'asc',
             },
         });
-        await redis.setex(cacheKey, CACHE_TTL.WORKSPACE_LIST, JSON.stringify(members));
+        await redis.set(cacheKey, members, { ex: CACHE_TTL.WORKSPACE_LIST });
         return members;
     }
     catch (error) {

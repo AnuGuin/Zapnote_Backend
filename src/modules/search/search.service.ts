@@ -21,7 +21,7 @@ export async function semanticSearch(
     const cached = await redis.get(cacheKey);
     if (cached) {
       logger.debug(`Search cache HIT: ${query}`);
-      return typeof cached === 'string' ? JSON.parse(cached) : cached;
+      return typeof cached === 'string' ? JSON.parse(cached) : (cached as SearchResponse);
     }
 
     logger.debug(`Search cache MISS: ${query}`);

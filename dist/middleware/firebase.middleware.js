@@ -26,7 +26,7 @@ export async function authenticateFirebaseToken(req, res, next) {
         const decodedToken = await firebaseAuth().verifyIdToken(idToken);
         const firebaseUid = decodedToken.uid;
         const email = decodedToken.email;
-        await redis.setex(cacheKey, 3600, firebaseUid);
+        await redis.set(cacheKey, firebaseUid, { ex: 3600 });
         let user = await prisma.user.findUnique({
             where: { id: firebaseUid },
         });

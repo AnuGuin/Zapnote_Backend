@@ -9,7 +9,7 @@ export async function semanticSearch(query, workspaceId, limit = 20, filters) {
         const cached = await redis.get(cacheKey);
         if (cached) {
             logger.debug(`Search cache HIT: ${query}`);
-            return JSON.parse(cached);
+            return typeof cached === 'string' ? JSON.parse(cached) : cached;
         }
         logger.debug(`Search cache MISS: ${query}`);
         const queryEmbedding = await generateEmbeddingCached(query);
@@ -43,7 +43,7 @@ export async function semanticSearch(query, workspaceId, limit = 20, filters) {
             results: filteredResults,
             totalResults: filteredResults.length,
         };
-        await redis.setex(cacheKey, CACHE_TTL.SEARCH_RESULTS, JSON.stringify(response));
+        await redis.set(cacheKey, response, { ex: CACHE_TTL.SEARCH_RESULTS });
         logger.info(`Semantic search completed: ${filteredResults.length} results`);
         return response;
     }

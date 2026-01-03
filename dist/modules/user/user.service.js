@@ -2,13 +2,19 @@ import prisma from "../../config/db.js";
 import { redis, CacheKeys, CACHE_TTL } from "../../config/redis.js";
 import { logger } from '../../utils/logger.js';
 import { ConflictError } from '../../utils/error.js';
+function parseCachedData(cached) {
+    if (typeof cached === 'string') {
+        return JSON.parse(cached);
+    }
+    return cached;
+}
 export async function getUserById(userId) {
     const cacheKey = CacheKeys.userProfile(userId);
     try {
         const cached = await redis.get(cacheKey);
         if (cached) {
             logger.debug(`Cache HIT: ${cacheKey}`);
-            return JSON.parse(cached);
+            return parseCachedData(cached);
         }
         logger.debug(`Cache MISS: ${cacheKey}`);
         const user = await prisma.user.findUnique({
@@ -23,7 +29,7 @@ export async function getUserById(userId) {
             },
         });
         if (user) {
-            await redis.setex(cacheKey, CACHE_TTL.USER_PROFILE, JSON.stringify(user));
+            await redis.set(cacheKey, user, { ex: CACHE_TTL.USER_PROFILE });
         }
         return user;
     }
@@ -103,7 +109,7 @@ export async function getUserWorkspaces(userId) {
         const cached = await redis.get(cacheKey);
         if (cached) {
             logger.debug(`Cache HIT: ${cacheKey}`);
-            return JSON.parse(cached);
+            return parseCachedData(cached);
         }
         logger.debug(`Cache MISS: ${cacheKey}`);
         const workspaces = await prisma.workspaceMember.findMany({
@@ -130,7 +136,7 @@ export async function getUserWorkspaces(userId) {
             role: wm.role,
             joinedAt: wm.joinedAt,
         }));
-        await redis.setex(cacheKey, CACHE_TTL.WORKSPACE_LIST, JSON.stringify(result));
+        await redis.set(cacheKey, result, { ex: CACHE_TTL.WORKSPACE_LIST });
         return result;
     }
     catch (error) {
