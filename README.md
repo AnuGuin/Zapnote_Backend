@@ -23,7 +23,7 @@ The backend follows a modular architecture with clear separation of concerns:
 │   Client Apps   │    │   Zapnote API   │    │  External APIs  │
 │                 │◄──►│                 │◄──►│                 │
 │ - Web Frontend  │    │ - Express Server│    │ - Gemini AI     │
-│ - Mobile Apps   │    │ - REST Endpoints│    │ - Firebase Auth │
+│                 │    │ - REST Endpoints│    │ - Firebase Auth │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                                 │
                                 ▼
