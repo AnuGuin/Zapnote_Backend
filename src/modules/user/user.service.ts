@@ -4,6 +4,13 @@ import { logger } from '../../utils/logger.js';
 import { NotFoundError, ConflictError } from '../../utils/error.js';
 import { UserProfile, UserStats } from './user.types.js';
 
+function parseCachedData<T>(cached: any): T {
+  if (typeof cached === 'string') {
+    return JSON.parse(cached);
+  }
+
+  return cached as T;
+}
 
 export async function getUserById(userId: string): Promise<UserProfile | null> {
   const cacheKey = CacheKeys.userProfile(userId);
@@ -12,7 +19,7 @@ export async function getUserById(userId: string): Promise<UserProfile | null> {
     const cached = await redis.get(cacheKey);
     if (cached) {
       logger.debug(`Cache HIT: ${cacheKey}`);
-      return JSON.parse(cached as string);
+      return parseCachedData<UserProfile>(cached);
     }
 
     logger.debug(`Cache MISS: ${cacheKey}`);
@@ -37,7 +44,6 @@ export async function getUserById(userId: string): Promise<UserProfile | null> {
     throw error;
   }
 }
-
 
 export async function updateUserProfile(
   userId: string,
@@ -84,7 +90,6 @@ export async function updateUserProfile(
   }
 }
 
-
 export async function getUserStats(userId: string): Promise<UserStats> {
   try {
     const [workspaceStats, knowledgeCount, conversationCount] = await Promise.all([
@@ -107,7 +112,6 @@ export async function getUserStats(userId: string): Promise<UserStats> {
       where: { ownerId: userId },
     });
 
-
     return {
       totalWorkspaces: workspaceStats[0]?._count || 0,
       ownedWorkspaces: ownedWorkspaces,
@@ -120,7 +124,6 @@ export async function getUserStats(userId: string): Promise<UserStats> {
   }
 }
 
-
 export async function getUserWorkspaces(userId: string) {
   const cacheKey = CacheKeys.userWorkspaces(userId);
 
@@ -128,7 +131,7 @@ export async function getUserWorkspaces(userId: string) {
     const cached = await redis.get(cacheKey);
     if (cached) {
       logger.debug(`Cache HIT: ${cacheKey}`);
-      return JSON.parse(cached as string);
+      return parseCachedData(cached);
     }
 
     logger.debug(`Cache MISS: ${cacheKey}`);
@@ -166,7 +169,6 @@ export async function getUserWorkspaces(userId: string) {
     throw error;
   }
 }
-
 
 export async function deleteUser(userId: string): Promise<void> {
   try {

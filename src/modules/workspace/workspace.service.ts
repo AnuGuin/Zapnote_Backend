@@ -5,6 +5,14 @@ import { NotFoundError, ForbiddenError, ConflictError } from '../../utils/error.
 import { Role } from '@prisma/client';
 import { WorkspaceMemberWithUser } from './workspace.types.js';
 
+
+function parseCachedData<T>(cached: any): T {
+  if (typeof cached === 'string') {
+    return JSON.parse(cached);
+  }
+  return cached as T;
+}
+
 export async function createWorkspace(
   userId: string,
   data: {
@@ -48,7 +56,6 @@ export async function createWorkspace(
   }
 }
 
-
 export async function getWorkspaceById(workspaceId: string, userId: string) {
   try {
     const workspace = await prisma.workspace.findUnique({
@@ -88,7 +95,6 @@ export async function getWorkspaceById(workspaceId: string, userId: string) {
   }
 }
 
-
 export async function updateWorkspace(
   workspaceId: string,
   data: {
@@ -123,7 +129,6 @@ export async function updateWorkspace(
   }
 }
 
-
 export async function deleteWorkspace(workspaceId: string) {
   try {
     const members = await prisma.workspaceMember.findMany({
@@ -154,11 +159,10 @@ export async function getWorkspaceMembers(
   const cacheKey = CacheKeys.workspaceMembers(workspaceId);
 
   try {
-    // Check cache
     const cached = await redis.get(cacheKey);
     if (cached) {
       logger.debug(`Cache HIT: ${cacheKey}`);
-      return JSON.parse(cached as string);
+      return parseCachedData<WorkspaceMemberWithUser[]>(cached);
     }
 
     logger.debug(`Cache MISS: ${cacheKey}`);
@@ -188,7 +192,6 @@ export async function getWorkspaceMembers(
     throw error;
   }
 }
-
 
 export async function addWorkspaceMember(
   workspaceId: string,
@@ -249,7 +252,6 @@ export async function addWorkspaceMember(
     throw error;
   }
 }
-
 
 export async function updateMemberRole(
   workspaceId: string,
@@ -316,7 +318,6 @@ export async function removeMember(workspaceId: string, memberId: string) {
     throw error;
   }
 }
-
 
 export async function leaveWorkspace(workspaceId: string, userId: string) {
   try {

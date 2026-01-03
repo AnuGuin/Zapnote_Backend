@@ -14,6 +14,7 @@ function formatTags(tags: any[]) {
   }));
 }
 
+
 function maskUntilCompleted(item: any) {
   if (item?.status === 'COMPLETED') return item;
 
