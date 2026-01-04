@@ -12,22 +12,18 @@ export async function generateSummary(
       ? `\nUser's intent: "${userIntent}"\n`
       : '';
 
-    const prompt = `Summarize the following content as 3-5 clear, concise bullet points.
+    const prompt = `Summarize the following content in a structured oneliner.
 ${intentContext}
 Content:
 ${content.slice(0, 10000)}
 
 Rules:
-- Each bullet point must start with "•" followed by a space
-- Each bullet point should be on its own line
-- Be concise but informative (1-2 sentences per point)
+- Be concise: aim for one-liner summaries per point
 - Focus on the key insights and main takeaways
 - No introductory text, just the bullet points
 
 Example format:
-• First key point here
-• Second key point here
-• Third key point here`;
+• This is a complete roadmap of how machine learning works focusing on basics and then stepping up`;
 
     const response = await generateWithFlash(prompt, GENERATION_CONFIG.SUMMARIZATION);
 

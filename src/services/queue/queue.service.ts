@@ -23,10 +23,12 @@ export async function processKnowledgeItem(knowledgeItemId: string) {
       throw new Error('Item not found');
     }
 
+
     await prisma.knowledgeItem.update({
       where: { id: knowledgeItemId },
       data: { status: 'PROCESSING', errorMessage: null },
     });
+
 
     logger.info(`Scraping URL: ${item.sourceUrl}`);
     const scrapeResult = await scrapeContent(item.sourceUrl);
@@ -34,9 +36,9 @@ export async function processKnowledgeItem(knowledgeItemId: string) {
       throw new Error(scrapeResult.error || 'Scraping failed');
     }
 
+
     logger.info(`Classifying content...`);
     const contentType = await classifyContent(scrapeResult.data.content, item.sourceUrl);
-
     await prisma.knowledgeItem.update({
       where: { id: knowledgeItemId },
       data: {
@@ -49,6 +51,7 @@ export async function processKnowledgeItem(knowledgeItemId: string) {
       },
     });
 
+
     logger.info(`Generating summary...`);
     const summary = await generateSummary(scrapeResult.data.content, item.userIntent || undefined);
     await prisma.knowledgeItem.update({
@@ -56,11 +59,11 @@ export async function processKnowledgeItem(knowledgeItemId: string) {
       data: { summary },
     });
 
+
     logger.info(`Generating embedding...`);
     const textToEmbed = [summary, scrapeResult.data.content.slice(0, 3000)]
       .filter(Boolean)
       .join('\n\n');
-
     const embedding = await generateEmbeddingCached(textToEmbed);
     const vectorLiteral = `[${embedding.join(',')}]`;
     const embeddingId = crypto.randomUUID();
@@ -71,21 +74,19 @@ export async function processKnowledgeItem(knowledgeItemId: string) {
       SET "vector" = CAST(${vectorLiteral} AS vector), "model" = ${'text-embedding-004'}
     `;
 
+
     logger.info(`Extracting tags...`);
     const tagNames = await extractTags(scrapeResult.data.content, summary);
     logger.info(`Got ${tagNames.length} tags: ${tagNames.join(', ')}`);
-
     for (const tagName of tagNames) {
       const normalized = normalizeTagName(tagName);
       if (!normalized) continue;
-
       const tag = await prisma.tag.upsert({
         where: { name: normalized },
         create: { name: normalized },
         update: {},
       });
-
-      await prisma.tagOnItem.upsert({
+    await prisma.tagOnItem.upsert({
         where: {
           itemId_tagId: {
             itemId: knowledgeItemId,
@@ -101,11 +102,13 @@ export async function processKnowledgeItem(knowledgeItemId: string) {
       });
     }
 
+
     await prisma.knowledgeItem.update({
       where: { id: knowledgeItemId },
       data: { status: 'COMPLETED' },
     });
 
+    
     await redis.del(CacheKeys.workspaceItems(item.workspaceId));
     logger.info(`Pipeline COMPLETED for: ${knowledgeItemId}`);
   } catch (error: any) {

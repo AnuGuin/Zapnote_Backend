@@ -7,7 +7,7 @@ export async function classifyContent(content, url) {
 - ARTICLE (blog posts, news articles, web pages)
 - VIDEO (YouTube videos, Vimeo, etc.)
 - AUDIO (podcasts, music, audio files)
-- SOCIAL_POST (Twitter/X, LinkedIn, Facebook posts)
+- SOCIAL POST (Twitter/X, LinkedIn, Facebook posts)
 - CODE (GitHub repos, code snippets)
 - IMAGE (images, infographics)
 

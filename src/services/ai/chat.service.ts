@@ -1,4 +1,4 @@
-import { generateWithPro } from './gemini.service.js';
+import { generateWithFlash } from './gemini.service.js';
 import { GENERATION_CONFIG } from '../../config/gemini.js';
 import { logger } from '../../utils/logger.js';
 
@@ -53,7 +53,7 @@ INSTRUCTIONS:
 
 ANSWER:`;
 
-    const response = await generateWithPro(prompt, GENERATION_CONFIG.CHAT);
+    const response = await generateWithFlash(prompt, GENERATION_CONFIG.CHAT);
 
     const sourceIds = retrievedContext.map((item) => item.id);
 
