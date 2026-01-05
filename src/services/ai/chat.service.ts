@@ -8,7 +8,7 @@ export async function generateChatResponse(
   retrievedContext: Array<{
     id: string;
     title: string;
-    summary: string | null;
+    content: string;
     sourceUrl: string;
   }>,
   conversationHistory: Array<{
@@ -24,7 +24,7 @@ export async function generateChatResponse(
       .map(
         (item, idx) =>
           `[${idx + 1}] Title: ${item.title}
-Summary: ${item.summary || 'No summary available'}
+Content: ${item.content || 'No content available'}
 URL: ${item.sourceUrl}
 ---`
       )

@@ -1,7 +1,7 @@
 export declare function generateChatResponse(userQuery: string, retrievedContext: Array<{
     id: string;
     title: string;
-    summary: string | null;
+    content: string;
     sourceUrl: string;
 }>, conversationHistory?: Array<{
     role: string;

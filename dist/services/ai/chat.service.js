@@ -5,7 +5,7 @@ export async function generateChatResponse(userQuery, retrievedContext, conversa
     try {
         const contextText = retrievedContext
             .map((item, idx) => `[${idx + 1}] Title: ${item.title}
-Summary: ${item.summary || 'No summary available'}
+Content: ${item.content || 'No content available'}
 URL: ${item.sourceUrl}
 ---`)
             .join('\n\n');
