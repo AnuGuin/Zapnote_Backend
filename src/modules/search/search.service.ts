@@ -6,6 +6,25 @@ import { logger } from '../../utils/logger.js';
 import { SearchResult, SearchResponse } from './search.types.js';
 
 
+function applySimilarityPolicy(results: SearchResult[]): SearchResult[] {
+  if (!results || results.length === 0) return [];
+
+  const first = results[0];
+  if (!first) return [];
+  const top = first.similarity;
+
+  if (top >= 0.6) {
+    return [first];
+  }
+
+  if (top >= 0.5) {
+    return results.filter(r => r.similarity >= 0.5).slice(0, 2);
+  }
+
+  return [];
+}
+
+
 export async function semanticSearch(
   query: string,
   workspaceId: string,
@@ -67,10 +86,13 @@ export async function semanticSearch(
       );
     }
 
+    // Apply similarity policy thresholds (>=0.6 => top1, 0.5-0.6 => up to top2, else none)
+    const finalResults = applySimilarityPolicy(filteredResults);
+
     const response: SearchResponse = {
       query,
-      results: filteredResults,
-      totalResults: filteredResults.length,
+      results: finalResults,
+      totalResults: finalResults.length,
     };
 
 
@@ -118,11 +140,13 @@ export async function performHybridSearch(
       createdAt: r.createdAt,
     }));
 
-    logger.info(`Hybrid search completed: ${results.length} results`);
+    const finalResults = applySimilarityPolicy(results);
+
+    logger.info(`Hybrid search completed: ${finalResults.length} results`);
     return {
       query,
-      results,
-      totalResults: results.length,
+      results: finalResults,
+      totalResults: finalResults.length,
     };
   } catch (error) {
     logger.error('Hybrid search error:', error);

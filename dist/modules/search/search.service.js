@@ -3,6 +3,21 @@ import { redis, CacheKeys, CACHE_TTL } from '../../config/redis.js';
 import { generateEmbeddingCached } from '../../services/ai/embedding.service.js';
 import { vectorSearch, hybridSearch } from '../../services/ai/vector.service.js';
 import { logger } from '../../utils/logger.js';
+function applySimilarityPolicy(results) {
+    if (!results || results.length === 0)
+        return [];
+    const first = results[0];
+    if (!first)
+        return [];
+    const top = first.similarity;
+    if (top >= 0.6) {
+        return [first];
+    }
+    if (top >= 0.5) {
+        return results.filter(r => r.similarity >= 0.5).slice(0, 2);
+    }
+    return [];
+}
 export async function semanticSearch(query, workspaceId, limit = 20, filters) {
     const cacheKey = CacheKeys.searchResults(query, workspaceId);
     try {
@@ -38,10 +53,12 @@ export async function semanticSearch(query, workspaceId, limit = 20, filters) {
         if (filters?.tags && filters.tags.length > 0) {
             filteredResults = results.filter((r) => filters.tags.some((tag) => r.tags.includes(tag)));
         }
+        // Apply similarity policy thresholds (>=0.6 => top1, 0.5-0.6 => up to top2, else none)
+        const finalResults = applySimilarityPolicy(filteredResults);
         const response = {
             query,
-            results: filteredResults,
-            totalResults: filteredResults.length,
+            results: finalResults,
+            totalResults: finalResults.length,
         };
         await redis.set(cacheKey, response, { ex: CACHE_TTL.SEARCH_RESULTS });
         logger.info(`Semantic search completed: ${filteredResults.length} results`);
@@ -76,11 +93,12 @@ export async function performHybridSearch(query, workspaceId, limit = 20) {
             tags: tagsByItem[r.id] || [],
             createdAt: r.createdAt,
         }));
-        logger.info(`Hybrid search completed: ${results.length} results`);
+        const finalResults = applySimilarityPolicy(results);
+        logger.info(`Hybrid search completed: ${finalResults.length} results`);
         return {
             query,
-            results,
-            totalResults: results.length,
+            results: finalResults,
+            totalResults: finalResults.length,
         };
     }
     catch (error) {

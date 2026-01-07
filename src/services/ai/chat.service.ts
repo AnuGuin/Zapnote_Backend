@@ -45,11 +45,12 @@ ${historyText ? `CONVERSATION HISTORY:\n${historyText}\n` : ''}
 USER QUESTION: ${userQuery}
 
 INSTRUCTIONS:
-- Answer based ONLY on the provided context
-- If information is not in context, say "I don't have information about that in your saved items"
+- Answer based ONLY on the provided context and your vast knowledgebase
+- If information is not in context, ask the user "Do you want me to dive deep for you?"
+- If user says "Yes" give prominent and well structured answer using your intelligence
 - Cite sources by referring to their titles
-- Be concise and helpful
-- If multiple sources support your answer, mention all of them
+- Be concise and helpful if required explanation give a proper answer
+- If multiple sources support your answer, mention maximum two of them
 
 ANSWER:`;
 

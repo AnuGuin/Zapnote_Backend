@@ -7,7 +7,6 @@ export async function generateEmbeddingCached(text: string): Promise<number[]> {
   const cacheKey = CacheKeys.embedding(text);
 
   try {
-    // Cache is best-effort; if Redis isn't configured, keep going.
     try {
       const cached = await redis.get(cacheKey);
       if (cached) {

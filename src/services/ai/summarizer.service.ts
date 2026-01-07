@@ -12,18 +12,18 @@ export async function generateSummary(
       ? `\nUser's intent: "${userIntent}"\n`
       : '';
 
-    const prompt = `Summarize the following content in a structured oneliner.
+    const prompt = `Summarize the following content in a structured format.
 ${intentContext}
 Content:
 ${content.slice(0, 10000)}
 
 Rules:
-- Be concise: aim for one-liner summaries per point
+- Be concise: aim for one-liner summaries
 - Focus on the key insights and main takeaways
-- No introductory text, just the bullet points
+- No introductory text, just one complete sentence
 
 Example format:
-• This is a complete roadmap of how machine learning works focusing on basics and then stepping up`;
+• This is a complete roadmap of how machine learning works focusing on basics and then stepping up.`;
 
     const response = await generateWithFlash(prompt, GENERATION_CONFIG.SUMMARIZATION);
 
