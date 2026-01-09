@@ -3,10 +3,7 @@ import * as whiteboardService from './whiteboard.service.js';
 import { successResponse } from '../../utils/response.js';
 import { socketEmit } from '../../config/socket.js';
 
-/**
- * Create space
- * POST /api/v1/workspaces/:workspaceId/spaces
- */
+
 export async function createSpace(req: Request, res: Response, next: NextFunction) {
   try {
     const { workspaceId } = req.params;
@@ -14,7 +11,6 @@ export async function createSpace(req: Request, res: Response, next: NextFunctio
 
     const space = await whiteboardService.createSpace(workspaceId!, name);
 
-    // Notify workspace members
     socketEmit.toWorkspace(workspaceId!, 'space:created', space);
 
     successResponse(res, space, 'Space created successfully', 201);
@@ -23,10 +19,7 @@ export async function createSpace(req: Request, res: Response, next: NextFunctio
   }
 }
 
-/**
- * Get spaces
- * GET /api/v1/workspaces/:workspaceId/spaces
- */
+
 export async function getSpaces(req: Request, res: Response, next: NextFunction) {
   try {
     const { workspaceId } = req.params;
@@ -38,10 +31,7 @@ export async function getSpaces(req: Request, res: Response, next: NextFunction)
   }
 }
 
-/**
- * Get space with elements
- * GET /api/v1/workspaces/:workspaceId/spaces/:spaceId
- */
+
 export async function getSpace(req: Request, res: Response, next: NextFunction) {
   try {
     const { workspaceId, spaceId } = req.params;
@@ -53,10 +43,7 @@ export async function getSpace(req: Request, res: Response, next: NextFunction) 
   }
 }
 
-/**
- * Create element
- * POST /api/v1/workspaces/:workspaceId/spaces/:spaceId/elements
- */
+
 export async function createElement(req: Request, res: Response, next: NextFunction) {
   try {
     const { workspaceId, spaceId } = req.params;
@@ -64,11 +51,11 @@ export async function createElement(req: Request, res: Response, next: NextFunct
 
     const element = await whiteboardService.createElement(spaceId!, type, content);
 
-    // Real-time update
     socketEmit.toWorkspace(workspaceId!, 'element:created', {
       spaceId,
       element,
     });
+    socketEmit.toSpace(spaceId!, 'element:created', { element });
 
     successResponse(res, element, 'Element created successfully', 201);
   } catch (error) {
@@ -76,10 +63,7 @@ export async function createElement(req: Request, res: Response, next: NextFunct
   }
 }
 
-/**
- * Update element
- * PATCH /api/v1/workspaces/:workspaceId/spaces/:spaceId/elements/:elementId
- */
+
 export async function updateElement(req: Request, res: Response, next: NextFunction) {
   try {
     const { workspaceId, spaceId, elementId } = req.params;
@@ -87,11 +71,11 @@ export async function updateElement(req: Request, res: Response, next: NextFunct
 
     const element = await whiteboardService.updateElement(elementId!, spaceId!, content);
 
-    // Real-time update
     socketEmit.toWorkspace(workspaceId!, 'element:updated', {
       spaceId,
       element,
     });
+    socketEmit.toSpace(spaceId!, 'element:updated', { element });
 
     successResponse(res, element, 'Element updated successfully');
   } catch (error) {
@@ -99,21 +83,18 @@ export async function updateElement(req: Request, res: Response, next: NextFunct
   }
 }
 
-/**
- * Delete element
- * DELETE /api/v1/workspaces/:workspaceId/spaces/:spaceId/elements/:elementId
- */
+
 export async function deleteElement(req: Request, res: Response, next: NextFunction) {
   try {
     const { workspaceId, spaceId, elementId } = req.params;
 
     await whiteboardService.deleteElement(elementId!, spaceId!);
 
-    // Real-time update
     socketEmit.toWorkspace(workspaceId!, 'element:deleted', {
       spaceId,
       elementId,
     });
+    socketEmit.toSpace(spaceId!, 'element:deleted', { elementId });
 
     successResponse(res, null, 'Element deleted successfully');
   } catch (error) {
@@ -121,17 +102,33 @@ export async function deleteElement(req: Request, res: Response, next: NextFunct
   }
 }
 
-/**
- * Delete space
- * DELETE /api/v1/workspaces/:workspaceId/spaces/:spaceId
- */
+
+export async function moveElement(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { workspaceId, spaceId, elementId } = req.params;
+    const { content } = req.body;
+
+    const element = await whiteboardService.moveElement(elementId!, spaceId!, content);
+
+    socketEmit.toWorkspace(workspaceId!, 'element:moved', {
+      spaceId,
+      element,
+    });
+    socketEmit.toSpace(spaceId!, 'element:moved', { element });
+
+    successResponse(res, element, 'Element moved successfully');
+  } catch (error) {
+    next(error);
+  }
+}
+
+
 export async function deleteSpace(req: Request, res: Response, next: NextFunction) {
   try {
     const { workspaceId, spaceId } = req.params;
 
     await whiteboardService.deleteSpace(spaceId!, workspaceId!);
 
-    // Real-time update
     socketEmit.toWorkspace(workspaceId!, 'space:deleted', { spaceId });
 
     successResponse(res, null, 'Space deleted successfully');

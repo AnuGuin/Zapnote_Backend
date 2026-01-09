@@ -103,6 +103,38 @@ export async function updateElement(elementId, spaceId, content) {
         throw error;
     }
 }
+export async function moveElement(elementId, spaceId, content) {
+    try {
+        const existingElement = await db.spaceElement.findFirst({
+            where: {
+                id: elementId,
+                spaceId,
+            },
+        });
+        if (!existingElement) {
+            throw new NotFoundError('Element not found in this space');
+        }
+        const element = await db.spaceElement.update({
+            where: {
+                id: elementId,
+            },
+            data: {
+                content,
+                updatedAt: new Date(),
+            },
+        });
+        await db.space.update({
+            where: { id: spaceId },
+            data: { updatedAt: new Date() },
+        });
+        logger.info(`Element moved in space ${spaceId}: ${elementId}`);
+        return element;
+    }
+    catch (error) {
+        logger.error('Error moving element:', error);
+        throw error;
+    }
+}
 export async function deleteElement(elementId, spaceId) {
     try {
         await db.spaceElement.delete({

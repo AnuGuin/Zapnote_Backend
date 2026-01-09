@@ -41,6 +41,14 @@ export function initializeSocketIO(httpServer) {
             socket.leave(`workspace:${workspaceId}`);
             logger.info(`User ${userId} unsubscribed from workspace: ${workspaceId}`);
         });
+        socket.on('subscribe:space', (spaceId) => {
+            socket.join(`space:${spaceId}`);
+            logger.info(`User ${userId} subscribed to space: ${spaceId}`);
+        });
+        socket.on('unsubscribe:space', (spaceId) => {
+            socket.leave(`space:${spaceId}`);
+            logger.info(`User ${userId} unsubscribed from space: ${spaceId}`);
+        });
         socket.on('disconnect', () => {
             logger.info(`Client disconnected: ${socket.id}`);
         });
@@ -52,6 +60,11 @@ export const socketEmit = {
     toWorkspace: (workspaceId, event, data) => {
         if (io) {
             io.to(`workspace:${workspaceId}`).emit(event, data);
+        }
+    },
+    toSpace: (spaceId, event, data) => {
+        if (io) {
+            io.to(`space:${spaceId}`).emit(event, data);
         }
     },
     toUser: (userId, event, data) => {

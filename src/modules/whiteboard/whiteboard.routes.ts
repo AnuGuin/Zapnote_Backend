@@ -8,6 +8,7 @@ import {
   createSpaceSchema,
   createElementSchema,
   updateElementSchema,
+  moveElementSchema,
 } from './whiteboard.types.js';
 
 const router = express.Router({ mergeParams: true });
@@ -39,6 +40,14 @@ router.patch(
   requireRole('OWNER', 'EDITOR'),
   validateRequest(updateElementSchema),
   whiteboardController.updateElement
+);
+
+router.put(
+  '/:spaceId/elements/:elementId/move',
+  requireRole('OWNER', 'EDITOR'),
+  rateLimit('move-element', 1000),
+  validateRequest(moveElementSchema),
+  whiteboardController.moveElement
 );
 
 router.delete(

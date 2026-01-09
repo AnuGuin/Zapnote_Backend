@@ -30,3 +30,14 @@ export const updateElementSchema = z.object({
     content: z.any(),
   }),
 });
+
+export const moveElementSchema = z.object({
+  params: z.object({
+    workspaceId: z.string().uuid(),
+    spaceId: z.string().uuid(),
+    elementId: z.string().uuid(),
+  }),
+  body: z.object({
+    content: z.any(), // Contains position (x, y) and other element data
+  }),
+});
