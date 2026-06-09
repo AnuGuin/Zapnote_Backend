@@ -3,7 +3,7 @@ declare const genAI: GoogleGenerativeAI;
 export declare const GEMINI_MODELS: {
     readonly FLASH: "gemini-2.5-flash";
     readonly PRO: "gemini-2.5-pro";
-    readonly EMBEDDING: "text-embedding-004";
+    readonly EMBEDDING: "gemini-embedding-2";
 };
 export declare const geminiFlash: import("@google/generative-ai").GenerativeModel;
 export declare const geminiPro: import("@google/generative-ai").GenerativeModel;

@@ -53,7 +53,7 @@ export function initializeSocketIO(httpServer) {
             logger.info(`Client disconnected: ${socket.id}`);
         });
     });
-    logger.info('✅ Socket.IO initialized');
+    logger.info('Socket.IO initialized');
     return io;
 }
 export const socketEmit = {

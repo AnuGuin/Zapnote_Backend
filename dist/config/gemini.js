@@ -7,7 +7,7 @@ const genAI = new GoogleGenerativeAI(apiKey);
 export const GEMINI_MODELS = {
     FLASH: 'gemini-2.5-flash',
     PRO: 'gemini-2.5-pro',
-    EMBEDDING: 'text-embedding-004',
+    EMBEDDING: 'gemini-embedding-2',
 };
 export const geminiFlash = genAI.getGenerativeModel({
     model: GEMINI_MODELS.FLASH,

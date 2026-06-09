@@ -1,4 +1,4 @@
-import { geminiFlash, geminiPro, genAI, GENERATION_CONFIG } from '../../config/gemini.js';
+import { geminiFlash, geminiPro, genAI, GENERATION_CONFIG, GEMINI_MODELS } from '../../config/gemini.js';
 import type { GenerationConfig } from '../../config/gemini.js';
 import { logger } from '../../utils/logger.js';
 
@@ -109,8 +109,11 @@ export async function generateWithPro(
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
     return await retryWithBackoff(async () => {
-      const model = genAI.getGenerativeModel({ model: 'text-embedding-004' });
-      const result = await model.embedContent(text);
+      const model = genAI.getGenerativeModel({ model: GEMINI_MODELS.EMBEDDING });
+      const result = await model.embedContent({
+        content: { role: 'user', parts: [{ text }] },
+        outputDimensionality: 768
+      } as any);
       
       return result.embedding.values;
     });

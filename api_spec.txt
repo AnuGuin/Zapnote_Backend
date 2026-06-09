@@ -265,19 +265,26 @@ POST /:spaceId/elements
 - Rate limit: rateLimit('create-element', 500)
 - Body: { type: string, content: any }
 - Response: 201 created element
-- Emits socket event: 'element:created' to workspace
+- Emits socket event: 'element:created' to workspace and space
 
 PATCH /:spaceId/elements/:elementId
 - Body: { content: any }
 - Response: updated element
-- Emits socket event: 'element:updated'
+- Emits socket event: 'element:updated' to workspace and space
+
+PUT /:spaceId/elements/:elementId/move
+- Rate limit: rateLimit('move-element', 1000)
+- Body: { content: any } (contains position data)
+- Response: { success: true, message: 'Element moved successfully', data: updatedElement }
+- Emits socket event: 'element:moved' to workspace and space
 
 DELETE /:spaceId/elements/:elementId
 - Response: success
-- Emits socket event: 'element:deleted'
+- Emits socket event: 'element:deleted' to workspace and space
 
 DELETE /:spaceId (Owner only)
 - Response: { success: true, message: 'Space deleted successfully', data: null }
+- Emits socket event: 'space:deleted' to workspace
 
 Validation & Error handling notes
 ---------------------------------

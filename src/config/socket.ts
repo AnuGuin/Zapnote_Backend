@@ -69,7 +69,7 @@ export function initializeSocketIO(httpServer: HTTPServer) {
     });
   });
 
-  logger.info('✅ Socket.IO initialized');
+  logger.info('Socket.IO initialized');
   return io;
 }
 

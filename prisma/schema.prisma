@@ -122,7 +122,7 @@ model Embedding {
 
   vector Unsupported("vector(768)")
 
-  model String @default("text-embedding-004")
+  model String @default("gemini-embedding-2")
 
   knowledgeItemId String        @unique
   item            KnowledgeItem @relation(fields: [knowledgeItemId], references: [id], onDelete: Cascade)

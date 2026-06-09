@@ -6,6 +6,7 @@ import { generateSummary } from '../ai/summarizer.service.js';
 import { generateEmbeddingCached } from '../ai/embedding.service.js';
 import { extractTags } from '../ai/tagger.service.js';
 import { redis, CacheKeys } from '../../config/redis.js';
+import { GEMINI_MODELS } from '../../config/gemini.js';
 import crypto from 'crypto';
 const normalizeTagName = (tagName) => tagName?.toLowerCase().trim();
 export async function processKnowledgeItem(knowledgeItemId) {
@@ -54,9 +55,9 @@ export async function processKnowledgeItem(knowledgeItemId) {
         const embeddingId = crypto.randomUUID();
         await prisma.$executeRaw `
       INSERT INTO "Embedding" ("id", "knowledgeItemId", "vector", "model")
-      VALUES (${embeddingId}, ${knowledgeItemId}, CAST(${vectorLiteral} AS vector), ${'text-embedding-004'})
+      VALUES (${embeddingId}, ${knowledgeItemId}, CAST(${vectorLiteral} AS vector), ${GEMINI_MODELS.EMBEDDING})
       ON CONFLICT ("knowledgeItemId") DO UPDATE
-      SET "vector" = CAST(${vectorLiteral} AS vector), "model" = ${'text-embedding-004'}
+      SET "vector" = CAST(${vectorLiteral} AS vector), "model" = ${GEMINI_MODELS.EMBEDDING}
     `;
         logger.info(`Extracting tags...`);
         const tagNames = await extractTags(scrapeResult.data.content, summary);
